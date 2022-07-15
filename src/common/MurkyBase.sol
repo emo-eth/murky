@@ -2,15 +2,6 @@
 pragma solidity ^0.8.4;
 
 abstract contract MurkyBase {
-    uint136 constant _2_128 = 2**128;
-    uint72 constant _2_64 = 2**64;
-    uint40 constant _2_32 = 2**32;
-    uint24 constant _2_16 = 2**16;
-    uint16 constant _2_8 = 2**8;
-    uint8 constant _2_4 = 2**4;
-    uint8 constant _2_2 = 2**2;
-    uint8 constant _2_1 = 2**1;
-
     /***************
      * CONSTRUCTOR *
      ***************/
@@ -19,11 +10,7 @@ abstract contract MurkyBase {
     /********************
      * VIRTUAL HASHING FUNCTIONS *
      ********************/
-    function hashLeafPairs(bytes32 left, bytes32 right)
-        public
-        pure
-        virtual
-        returns (bytes32 _hash);
+    function hashLeafPairs(bytes32 left, bytes32 right) public pure virtual returns (bytes32 _hash);
 
     /**********************
      * PROOF VERIFICATION *
@@ -49,7 +36,7 @@ abstract contract MurkyBase {
      * PROOF GENERATION *
      ********************/
 
-    function getRoot(bytes32[] memory data) public pure returns (bytes32) {
+    function getRoot(bytes32[] memory data) public pure virtual returns (bytes32) {
         require(data.length > 1, "won't generate root for single leaf");
         while (data.length > 1) {
             data = hashLevel(data);
@@ -57,11 +44,7 @@ abstract contract MurkyBase {
         return data[0];
     }
 
-    function getProof(bytes32[] memory data, uint256 node)
-        public
-        pure
-        returns (bytes32[] memory result)
-    {
+    function getProof(bytes32[] memory data, uint256 node) public pure virtual returns (bytes32[] memory result) {
         require(data.length > 1, "won't generate proof for single leaf");
         // The size of the proof is equal to the ceiling of log2(numLeaves)
         // Two overflow risks: node, pos
@@ -84,10 +67,7 @@ abstract contract MurkyBase {
                 case 0 {
                     // get pointer to result[node+1] by adding 2 to node and multiplying by 0x20
                     // to account for the fact that result points to array length, not first index
-                    mstore(
-                        resultIndexPtr,
-                        mload(add(data, mul(0x20, add(2, node))))
-                    )
+                    mstore(resultIndexPtr, mload(add(data, mul(0x20, add(2, node)))))
                 }
                 // node is last
                 case 2 {
@@ -112,16 +92,14 @@ abstract contract MurkyBase {
     }
 
     ///@dev function is private to prevent unsafe data from being passed
-    function hashLevel(bytes32[] memory data)
-        private
-        pure
-        returns (bytes32[] memory result)
-    {
+    function hashLevel(bytes32[] memory data) internal pure virtual returns (bytes32[] memory result) {
         // bytes32[] memory result;
 
         // Function is private, and all internal callers check that data.length >=2.
         // Underflow is not possible as lowest possible value for data/result index is 1
         // overflow should be safe as length is / 2 always.
+
+        // declare these variables outside of loop and assembly scope
         uint256 length;
         uint256 newLength;
         uint256 resultIndexPointer;
@@ -129,11 +107,15 @@ abstract contract MurkyBase {
         uint256 stopIteration;
         bool hashLast;
         assembly {
+            // we will be modifying data in-place, so set result pointer to data pointer
             result := data
+            // get length of original data array
             length := mload(data)
             switch and(length, 1)
             case 1 {
+                // if length is odd, add 1 so division by 2 will round up
                 newLength := add(1, div(length, 2))
+                // note that we will need to hash the last element of data with 0 to get last element of result array
                 hashLast := 1
                 // todo: hash last node with zero
             }
@@ -144,7 +126,6 @@ abstract contract MurkyBase {
             resultIndexPointer := add(0x20, data)
             dataIndexPointer := resultIndexPointer
             // stop iterating over for loop at length-1
-            // todo: does this make sense
             stopIteration := add(data, mul(length, 0x20))
         }
         for (; dataIndexPointer < stopIteration; ) {
@@ -169,59 +150,6 @@ abstract contract MurkyBase {
             bytes32 hashedPair = hashLeafPairs(data1, bytes32(0));
             assembly {
                 mstore(resultIndexPointer, hashedPair)
-            }
-        }
-    }
-
-    /******************
-     * MATH "LIBRARY" *
-     ******************/
-
-    /// Original bitmagic adapted from https://github.com/paulrberg/prb-math/blob/main/contracts/PRBMath.sol
-    /// @dev Note that x assumed > 1
-    function log2ceilBitMagic(uint256 x)
-        public
-        pure
-        returns (uint256 mostSignificantBit)
-    {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let xCopy := x
-            if iszero(lt(x, _2_128)) {
-                x := shr(128, x)
-                mostSignificantBit := add(mostSignificantBit, 128)
-            }
-            if iszero(lt(x, _2_64)) {
-                x := shr(64, x)
-                mostSignificantBit := add(mostSignificantBit, 64)
-            }
-            if iszero(lt(x, _2_32)) {
-                x := shr(32, x)
-                mostSignificantBit := add(mostSignificantBit, 32)
-            }
-            if iszero(lt(x, _2_16)) {
-                x := shr(16, x)
-                mostSignificantBit := add(mostSignificantBit, 16)
-            }
-            if iszero(lt(x, _2_8)) {
-                x := shr(8, x)
-                mostSignificantBit := add(mostSignificantBit, 8)
-            }
-            if iszero(lt(x, _2_4)) {
-                x := shr(4, x)
-                mostSignificantBit := add(mostSignificantBit, 4)
-            }
-            if iszero(lt(x, _2_2)) {
-                x := shr(2, x)
-                mostSignificantBit := add(mostSignificantBit, 2)
-            }
-            if iszero(lt(x, _2_1)) {
-                // No need to shift x any more.
-                mostSignificantBit := add(mostSignificantBit, 1)
-            }
-            let lsb := and(add(1, not(xCopy)), xCopy)
-            if and(iszero(eq(lsb, xCopy)), gt(xCopy, 0)) {
-                mostSignificantBit := add(mostSignificantBit, 1)
             }
         }
     }
