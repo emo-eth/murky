@@ -32,30 +32,31 @@ contract Xorkle is MurkyBase {
 
     function getRoot(bytes32[] memory data)
         external
-        pure
+        view
         override
         returns (bytes32 result)
     {
         require(data.length > 1, "won't generate root for single leaf");
+        bool hashOddWithZero = HASH_ODD_WITH_ZERO;
         assembly {
             function hashLeafPairs(left, right) -> _hash {
                 mstore(0x0, xor(left, right))
                 _hash := keccak256(0x0, 0x20)
             }
-            function hashLevel(_data, length) -> newLength {
+            function hashLevel(_data, length, _hashOddWithZero) -> newLength {
                 // we will be modifying data in-place, so set result pointer to data pointer
                 let _result := _data
                 // get length of original data array
                 // let length := mload(_data)
                 // bool to track if we need to hash the last element of an odd-length array with zero
-                let hashLast
+                let oddLength
 
                 // if length is odd, we need to hash the last element with zero
                 switch and(length, 1)
                 case 1 {
                     // if length is odd, add 1 so division by 2 will round up
                     newLength := add(1, div(length, 2))
-                    hashLast := 1
+                    oddLength := 1
                 }
                 default {
                     newLength := div(length, 2)
@@ -85,10 +86,17 @@ contract Xorkle is MurkyBase {
                     dataIndexPointer := add(0x40, dataIndexPointer)
                 }
                 // we did not yet hash last index if odd-length
-                if hashLast {
+                if oddLength {
                     let data1 := mload(dataIndexPointer)
-                    let hashedPair := hashLeafPairs(data1, 0)
-                    mstore(resultIndexPointer, hashedPair)
+                    let nextValue
+                    switch _hashOddWithZero
+                    case 0 {
+                        nextValue := data1
+                    }
+                    default {
+                        nextValue := hashLeafPairs(data1, 0)
+                    }
+                    mstore(resultIndexPointer, nextValue)
                 }
             }
 
@@ -98,7 +106,7 @@ contract Xorkle is MurkyBase {
             } gt(dataLength, 1) {
 
             } {
-                dataLength := hashLevel(data, dataLength)
+                dataLength := hashLevel(data, dataLength, hashOddWithZero)
             }
             result := mload(add(0x20, data))
         }
@@ -106,37 +114,36 @@ contract Xorkle is MurkyBase {
 
     function getProof(bytes32[] memory data, uint256 node)
         external
-        pure
+        view
         override
         returns (bytes32[] memory result)
     {
         require(data.length > 1, "won't generate proof for single leaf");
+        bool hashOddWithZero = HASH_ODD_WITH_ZERO;
         // The size of the proof is equal to the ceiling of log2(numLeaves)
         // Two overflow risks: node, pos
         // node: max array size is 2**256-1. Largest index in the array will be 1 less than that. Also,
         // for dynamic arrays, size is limited to 2**64-1
         // pos: pos is bounded by log2(data.length), which should be less than type(uint256).max
-        // uint256 resultIndexPtr;
-        // uint256 length;
         assembly {
             function hashLeafPairs(left, right) -> _hash {
                 mstore(0x0, xor(left, right))
                 _hash := keccak256(0x0, 0x20)
             }
-            function hashLevel(_data, length) -> newLength {
+            function hashLevel(_data, length, _hashOddWithZero) -> newLength {
                 // we will be modifying data in-place, so set result pointer to data pointer
                 let _result := _data
                 // get length of original data array
                 // let length := mload(_data)
                 // bool to track if we need to hash the last element of an odd-length array with zero
-                let hashLast
+                let oddLength
 
                 // if length is odd, we'll need to hash the last element with zero
                 switch and(length, 1)
                 case 1 {
                     // if length is odd, add 1 so division by 2 will round up
                     newLength := add(1, div(length, 2))
-                    hashLast := 1
+                    oddLength := 1
                 }
                 default {
                     newLength := div(length, 2)
@@ -166,10 +173,17 @@ contract Xorkle is MurkyBase {
                     dataIndexPointer := add(0x40, dataIndexPointer)
                 }
                 // we did not yet hash last index if odd-length
-                if hashLast {
+                if oddLength {
                     let data1 := mload(dataIndexPointer)
-                    let hashedPair := hashLeafPairs(data1, 0)
-                    mstore(resultIndexPointer, hashedPair)
+                    let nextValue
+                    switch _hashOddWithZero
+                    case 0 {
+                        nextValue := data1
+                    }
+                    default {
+                        nextValue := hashLeafPairs(data1, 0)
+                    }
+                    mstore(resultIndexPointer, nextValue)
                 }
             }
 
@@ -221,7 +235,7 @@ contract Xorkle is MurkyBase {
                 // keep track of how long result array is
                 newLength := add(1, newLength)
                 // compute the next hash level, overwriting data, and get the new length
-                dataLength := hashLevel(data, dataLength)
+                dataLength := hashLevel(data, dataLength, hashOddWithZero)
             }
             // store length of result array at pointer
             mstore(result, newLength)

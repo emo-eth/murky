@@ -16,8 +16,8 @@ contract StandardizedInputTest is Test {
         inputs[1] = "src/test/standard_data/StandardInput.txt";
         bytes memory result = vm.ffi(inputs);
         data = abi.decode(result, (bytes32[100]));
-        x = new Xorkle(false);
-        m = new Merkle(false);
+        x = new Xorkle(true);
+        m = new Merkle(true);
     }
 
     function testXorkleGenerateProofStandard() public view {

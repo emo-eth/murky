@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 abstract contract MurkyBase {
-    bool immutable HASH_ODD_WITH_ZERO;
+    bool public immutable HASH_ODD_WITH_ZERO;
 
     constructor(bool hashOddWithZero) {
         HASH_ODD_WITH_ZERO = hashOddWithZero;

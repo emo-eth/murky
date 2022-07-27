@@ -6,11 +6,11 @@ import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 import {Util} from "./Util.sol";
 
-contract ContractTest is Test {
+contract MerkleTest is Test {
     Merkle m;
 
     function setUp() public {
-        m = new Merkle(false);
+        m = new Merkle(true);
     }
 
     function testHashes(bytes32 left, bytes32 right) public {
@@ -100,5 +100,56 @@ contract ContractTest is Test {
             if (data[i] == value) return false;
         }
         return true;
+    }
+
+    function testBadProof() public {
+        m = new Merkle(false);
+
+        uint8[5] memory unhashedElements = [0, 2, 4, 1, 3];
+        bytes32[] memory hashedElements = new bytes32[](5);
+        for (uint256 i = 0; i < 5; ++i) {
+            hashedElements[i] = keccak256(abi.encode(unhashedElements[i]));
+        }
+
+        bytes32[5] memory expectedHashedLeaves = [
+            bytes32(
+                0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563
+            ),
+            bytes32(
+                0x405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace
+            ),
+            bytes32(
+                0x8a35acfbc15ff81a39ae7d344fd709f28e8600b4aa8c65c6b64bfe7fe36bd19b
+            ),
+            bytes32(
+                0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6
+            ),
+            bytes32(
+                0xc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b
+            )
+        ];
+        for (uint256 i = 0; i < 5; ++i) {
+            assertEq(hashedElements[i], expectedHashedLeaves[i]);
+        }
+
+        bytes32[] memory expectedProof = new bytes32[](3);
+        expectedProof[
+            0
+        ] = 0x405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace;
+        expectedProof[
+            1
+        ] = 0xb4ac32458d01ec09d972c820893c530c5aca86752a8c02e2499f60b968613ded;
+        expectedProof[
+            2
+        ] = 0xc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b;
+        bytes32[] memory generatedProof = m.getProof(hashedElements, 0);
+        for (uint256 i = 0; i < 3; ++i) {
+            assertEq(generatedProof[i], expectedProof[i]);
+        }
+
+        assertEq(
+            m.getRoot(hashedElements),
+            0x91bcc50c5289d8945a178a27e28c83c68df8043d45285db1eddc140f73ac2c83
+        );
     }
 }

@@ -15,7 +15,7 @@ contract DifferentialTests is Test {
     bytes32[129] data;
 
     function setUp() public {
-        m = new Merkle();
+        m = new Merkle(true);
     }
     
     ///@dev original log2ceil implementation failed on this and other
