@@ -7,11 +7,18 @@ import "./common/MurkyBase.sol";
 /// @author dmfxyz
 /// @dev Note Xor Based "Merkle" Tree
 contract Xorkle is MurkyBase {
+    constructor(bool hashOddWithZero) MurkyBase(hashOddWithZero) {}
+
     /********************
      * HASHING FUNCTION *
      ********************/
 
-    function hashLeafPairs(bytes32 left, bytes32 right) public pure override returns (bytes32 _hash) {
+    function hashLeafPairs(bytes32 left, bytes32 right)
+        public
+        pure
+        override
+        returns (bytes32 _hash)
+    {
         // saves a few gas lol
         assembly {
             mstore(0x0, xor(left, right))
@@ -23,7 +30,12 @@ contract Xorkle is MurkyBase {
      * PROOF GENERATION *
      ********************/
 
-    function getRoot(bytes32[] memory data) external pure override returns (bytes32 result) {
+    function getRoot(bytes32[] memory data)
+        external
+        pure
+        override
+        returns (bytes32 result)
+    {
         require(data.length > 1, "won't generate root for single leaf");
         assembly {
             function hashLeafPairs(left, right) -> _hash {
@@ -92,7 +104,12 @@ contract Xorkle is MurkyBase {
         }
     }
 
-    function getProof(bytes32[] memory data, uint256 node) external pure override returns (bytes32[] memory result) {
+    function getProof(bytes32[] memory data, uint256 node)
+        external
+        pure
+        override
+        returns (bytes32[] memory result)
+    {
         require(data.length > 1, "won't generate proof for single leaf");
         // The size of the proof is equal to the ceiling of log2(numLeaves)
         // Two overflow risks: node, pos
@@ -181,7 +198,10 @@ contract Xorkle is MurkyBase {
                     // store data[node+1] at result[i]
                     // get pointer to result[node+1] by adding 2 to node and multiplying by 0x20
                     // to account for the fact that result points to array length, not first index
-                    mstore(resultIndexPtr, mload(add(data, mul(0x20, add(2, node)))))
+                    mstore(
+                        resultIndexPtr,
+                        mload(add(data, mul(0x20, add(2, node))))
+                    )
                 }
                 // 10 - node is last
                 case 2 {

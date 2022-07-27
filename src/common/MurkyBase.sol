@@ -2,10 +2,20 @@
 pragma solidity ^0.8.4;
 
 abstract contract MurkyBase {
+    bool immutable HASH_ODD_WITH_ZERO;
+
+    constructor(bool hashOddWithZero) {
+        HASH_ODD_WITH_ZERO = hashOddWithZero;
+    }
+
     /********************
      * VIRTUAL HASHING FUNCTIONS *
      ********************/
-    function hashLeafPairs(bytes32 left, bytes32 right) public pure virtual returns (bytes32 _hash);
+    function hashLeafPairs(bytes32 left, bytes32 right)
+        public
+        pure
+        virtual
+        returns (bytes32 _hash);
 
     /**********************
      * PROOF VERIFICATION *
@@ -33,5 +43,8 @@ abstract contract MurkyBase {
 
     function getRoot(bytes32[] memory data) external virtual returns (bytes32);
 
-    function getProof(bytes32[] memory data, uint256 node) external virtual returns (bytes32[] memory result);
+    function getProof(bytes32[] memory data, uint256 node)
+        external
+        virtual
+        returns (bytes32[] memory result);
 }

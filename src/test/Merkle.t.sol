@@ -4,13 +4,13 @@ pragma solidity ^0.8.4;
 import "../Merkle.sol";
 import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
-import { Util } from "./Util.sol";
+import {Util} from "./Util.sol";
 
 contract ContractTest is Test {
     Merkle m;
 
     function setUp() public {
-        m = new Merkle();
+        m = new Merkle(false);
     }
 
     function testHashes(bytes32 left, bytes32 right) public {
@@ -65,7 +65,10 @@ contract ContractTest is Test {
         assertTrue(m.verifyProof(root, proof, valueToProve));
     }
 
-    function testVerifyProofOzForGasComparison(bytes32[] memory data, uint256 node) public {
+    function testVerifyProofOzForGasComparison(
+        bytes32[] memory data,
+        uint256 node
+    ) public {
         vm.assume(data.length > 1);
         vm.assume(node < data.length);
         bytes32 root = m.getRoot(data);
@@ -88,7 +91,11 @@ contract ContractTest is Test {
         m.getProof(data, 0x0);
     }
 
-    function valueNotInArray(bytes32[] memory data, bytes32 value) public pure returns (bool) {
+    function valueNotInArray(bytes32[] memory data, bytes32 value)
+        public
+        pure
+        returns (bool)
+    {
         for (uint256 i = 0; i < data.length; ++i) {
             if (data[i] == value) return false;
         }
